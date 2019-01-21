@@ -68,7 +68,7 @@ class WPushButton : public WWidget {
     // associated pixmaps.
     void setStates(int iStates);
 
-    virtual WidgetTooltipWatcher* createTooltipWatcher(QList<ConfigKey> configKeys) override;
+    WidgetTooltipWatcher* createTooltipWatcher(QList<ConfigKey> configKeys) override;
 
 
   signals:
@@ -89,12 +89,14 @@ class WPushButton : public WWidget {
 
     // Associates a pixmap of a given state of the button with the widget
     void setPixmap(int iState, bool bPressed, PixmapSource source,
-                   Paintable::DrawMode mode);
+                   Paintable::DrawMode mode, double scaleFactor);
 
     // Associates a background pixmap with the widget. This is only needed if
     // the button pixmaps contains alpha channel values.
-    void setPixmapBackground(PixmapSource source,
-                            Paintable::DrawMode mode);
+    void setPixmapBackground(
+            PixmapSource source,
+            Paintable::DrawMode mode,
+            double scaleFactor);
 
     // True, if the button is currently pressed
     bool m_bPressed;

@@ -41,10 +41,10 @@ void Stat::processReport(const StatReport& report) {
     if (m_compute & (Stat::SUM | Stat::AVERAGE)) {
         m_sum += report.value;
     }
-    if (m_compute & Stat::MAX && report.value > m_max) {
+    if ((m_compute & Stat::MAX)&& report.value > m_max) {
         m_max = report.value;
     }
-    if (m_compute & Stat::MIN && report.value < m_min) {
+    if ((m_compute & Stat::MIN) && report.value < m_min) {
         m_min = report.value;
     }
 
@@ -124,8 +124,8 @@ QDebug operator<<(QDebug dbg, const Stat &stat) {
 
     if (stat.m_compute & Stat::HISTOGRAM) {
         QStringList histogram;
-        for (QMap<double, double>::const_iterator it = stat.m_histogram.begin();
-             it != stat.m_histogram.end(); ++it) {
+        for (auto it = stat.m_histogram.constBegin();
+             it != stat.m_histogram.constEnd(); ++it) {
             histogram << QString::number(it.key()) + stat.valueUnits() + ":" +
                     QString::number(it.value());
         }
@@ -145,7 +145,7 @@ bool Stat::track(const QString& tag,
         return false;
     }
     StatReport report;
-    report.tag = strdup(tag.toAscii().constData());
+    report.tag = strdup(tag.toUtf8().constData());
     report.type = type;
     report.compute = compute;
     report.time = mixxx::Time::elapsed().toIntegerNanos();

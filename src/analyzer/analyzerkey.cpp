@@ -12,7 +12,6 @@ using mixxx::track::io::key::ChromaticKey_IsValid;
 
 AnalyzerKey::AnalyzerKey(UserSettingsPointer pConfig)
         : m_pConfig(pConfig),
-          m_pVamp(NULL),
           m_iSampleRate(0),
           m_iTotalSamples(0),
           m_bPreferencesKeyDetectionEnabled(true),
@@ -20,34 +19,30 @@ AnalyzerKey::AnalyzerKey(UserSettingsPointer pConfig)
           m_bPreferencesReanalyzeEnabled(false) {
 }
 
-AnalyzerKey::~AnalyzerKey() {
-    delete m_pVamp;
-}
-
 bool AnalyzerKey::initialize(TrackPointer tio, int sampleRate, int totalSamples) {
     if (totalSamples == 0) {
         return false;
     }
 
-    m_bPreferencesKeyDetectionEnabled = static_cast<bool>(
-        m_pConfig->getValueString(
-            ConfigKey(KEY_CONFIG_KEY, KEY_DETECTION_ENABLED)).toInt());
+    m_bPreferencesKeyDetectionEnabled = m_pConfig->getValue<bool>(
+            ConfigKey(KEY_CONFIG_KEY, KEY_DETECTION_ENABLED));
     if (!m_bPreferencesKeyDetectionEnabled) {
         qDebug() << "Key detection is deactivated";
         return false;
     }
+    m_bPreferencesFastAnalysisEnabled = m_pConfig->getValue<bool>(
+            ConfigKey(KEY_CONFIG_KEY, KEY_FAST_ANALYSIS));
+    m_bPreferencesReanalyzeEnabled = m_pConfig->getValue<bool>(
+            ConfigKey(KEY_CONFIG_KEY, KEY_REANALYZE_WHEN_SETTINGS_CHANGE));
 
-    m_bPreferencesFastAnalysisEnabled = static_cast<bool>(
-        m_pConfig->getValueString(
-            ConfigKey(KEY_CONFIG_KEY, KEY_FAST_ANALYSIS)).toInt());
-    QString library = m_pConfig->getValueString(
-        ConfigKey(VAMP_CONFIG_KEY, VAMP_ANALYZER_KEY_LIBRARY),
-        // TODO(rryan) this default really doesn't belong here.
-        "libmixxxminimal");
-    QString pluginID = m_pConfig->getValueString(
-        ConfigKey(VAMP_CONFIG_KEY, VAMP_ANALYZER_KEY_PLUGIN_ID),
-        // TODO(rryan) this default really doesn't belong here.
-        VAMP_ANALYZER_KEY_DEFAULT_PLUGIN_ID);
+    QString library = m_pConfig->getValue(
+            ConfigKey(VAMP_CONFIG_KEY, VAMP_ANALYZER_KEY_LIBRARY),
+            // TODO(rryan) this default really doesn't belong here.
+            "libmixxxminimal");
+    QString pluginID = m_pConfig->getValue(
+            ConfigKey(VAMP_CONFIG_KEY, VAMP_ANALYZER_KEY_PLUGIN_ID),
+            // TODO(rryan) this default really doesn't belong here.
+            VAMP_ANALYZER_KEY_DEFAULT_PLUGIN_ID);
 
     m_pluginId = pluginID;
     m_iSampleRate = sampleRate;
@@ -57,13 +52,12 @@ bool AnalyzerKey::initialize(TrackPointer tio, int sampleRate, int totalSamples)
     bool bShouldAnalyze = !isDisabledOrLoadStoredSuccess(tio);
 
     if (bShouldAnalyze) {
-        m_pVamp = new VampAnalyzer();
+        m_pVamp = std::make_unique<VampAnalyzer>();
         bShouldAnalyze = m_pVamp->Init(
             library, m_pluginId, sampleRate, totalSamples,
             m_bPreferencesFastAnalysisEnabled);
         if (!bShouldAnalyze) {
-            delete m_pVamp;
-            m_pVamp = NULL;
+            m_pVamp.reset();
         }
     }
 
@@ -77,22 +71,23 @@ bool AnalyzerKey::initialize(TrackPointer tio, int sampleRate, int totalSamples)
 }
 
 bool AnalyzerKey::isDisabledOrLoadStoredSuccess(TrackPointer tio) const {
-    bool bPreferencesFastAnalysisEnabled = static_cast<bool>(
-        m_pConfig->getValueString(
-            ConfigKey(KEY_CONFIG_KEY, KEY_FAST_ANALYSIS)).toInt());
+    bool bPreferencesFastAnalysisEnabled = m_pConfig->getValue<bool>(
+            ConfigKey(KEY_CONFIG_KEY, KEY_FAST_ANALYSIS));
 
     QString library = m_pConfig->getValueString(
-        ConfigKey(VAMP_CONFIG_KEY, VAMP_ANALYZER_KEY_LIBRARY));
+            ConfigKey(VAMP_CONFIG_KEY, VAMP_ANALYZER_KEY_LIBRARY));
     QString pluginID = m_pConfig->getValueString(
-        ConfigKey(VAMP_CONFIG_KEY, VAMP_ANALYZER_KEY_PLUGIN_ID));
+            ConfigKey(VAMP_CONFIG_KEY, VAMP_ANALYZER_KEY_PLUGIN_ID));
 
     // TODO(rryan): This belongs elsewhere.
-    if (library.isEmpty() || library.isNull())
+    if (library.isEmpty() || library.isNull()) {
         library = "libmixxxminimal";
+    }
 
     // TODO(rryan): This belongs elsewhere.
-    if (pluginID.isEmpty() || pluginID.isNull())
+    if (pluginID.isEmpty() || pluginID.isNull()) {
         pluginID = VAMP_ANALYZER_KEY_DEFAULT_PLUGIN_ID;
+    }
 
     const Keys keys(tio->getKeys());
     if (keys.isValid()) {
@@ -124,23 +119,22 @@ bool AnalyzerKey::isDisabledOrLoadStoredSuccess(TrackPointer tio) const {
 }
 
 void AnalyzerKey::process(const CSAMPLE *pIn, const int iLen) {
-    if (m_pVamp == NULL)
+    if (!m_pVamp) {
         return;
+    }
     bool success = m_pVamp->Process(pIn, iLen);
     if (!success) {
-        delete m_pVamp;
-        m_pVamp = NULL;
+        m_pVamp.reset();
     }
 }
 
 void AnalyzerKey::cleanup(TrackPointer tio) {
     Q_UNUSED(tio);
-    delete m_pVamp;
-    m_pVamp = NULL;
+    m_pVamp.reset();
 }
 
 void AnalyzerKey::finalize(TrackPointer tio) {
-    if (m_pVamp == NULL) {
+    if (!m_pVamp) {
         return;
     }
 
@@ -149,8 +143,7 @@ void AnalyzerKey::finalize(TrackPointer tio) {
 
     QVector<double> frames = m_pVamp->GetInitFramesVector();
     QVector<double> keys = m_pVamp->GetLastValuesVector();
-    delete m_pVamp;
-    m_pVamp = NULL;
+    m_pVamp.reset();
 
     if (frames.size() == 0 || frames.size() != keys.size()) {
         qWarning() << "AnalyzerKey: Key sequence and list of times do not match.";

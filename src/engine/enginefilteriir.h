@@ -20,6 +20,8 @@ enum IIRPass {
     IIR_HP,
     IIR_LPMO,
     IIR_HPMO,
+    IIR_LP2,
+    IIR_HP2,
 };
 
 
@@ -51,6 +53,10 @@ class EngineFilterIIR : public EngineFilterIIRBase {
         if (!m_doStart) {
             pauseFilterInner();
         }
+    }
+
+    void setStartFromDry(bool val) {
+        m_startFromDry = val;
     }
 
     // this is can be used instead off a final process() call before pause
@@ -96,7 +102,7 @@ class EngineFilterIIR : public EngineFilterIIRBase {
             char* desc;
             FidFilter* filt = fid_design(spec_d, sampleRate, freq0, freq1, adj, &desc);
             int delay = fid_calc_delay(filt);
-            qDebug() << QString().fromAscii(desc) << "delay:" << delay;
+            qDebug() << QString().fromLatin1(desc) << "delay:" << delay;
             double resp0, phase0;
             resp0 = fid_response_pha(filt, freq0 / sampleRate, &phase0);
             qDebug() << "freq0:" << freq0 << resp0 << phase0;
@@ -149,7 +155,7 @@ class EngineFilterIIR : public EngineFilterIIRBase {
             FidFilter* filt2 = fid_design(spec2, sampleRate, freq02, freq12, adj2, &desc2);
             FidFilter* filt = fid_cat(1, filt1, filt2, NULL);
             int delay = fid_calc_delay(filt);
-            qDebug() << QString().fromAscii(desc1) << "X" << QString().fromAscii(desc2) << "delay:" << delay;
+            qDebug() << QString().fromLatin1(desc1) << "X" << QString().fromLatin1(desc2) << "delay:" << delay;
             double resp0, phase0;
             resp0 = fid_response_pha(filt, freq01 / sampleRate, &phase0);
             qDebug() << "freq01:" << freq01 << resp0 << phase0;
@@ -562,4 +568,47 @@ inline double EngineFilterIIR<4, IIR_HPMO>::processSample(double* coef,
    buf[3]= iir; val= fir;
    return val;
 }
+
+template<>
+inline double EngineFilterIIR<2, IIR_LP2>::processSample(double* coef,
+                                                        double* buf,
+                                                        double val) {
+    double tmp, fir, iir;
+    tmp = buf[0];
+    iir = val * coef[0];
+    iir -= coef[1] * tmp; fir = tmp;
+    fir += iir;
+    buf[0] = iir; val = fir;
+
+    tmp = buf[1];
+    iir = val;
+    iir -= coef[2] * tmp; fir = tmp;
+    fir += iir;
+    buf[1] = iir; val = fir;
+
+    return val;
+}
+
+
+template<>
+inline double EngineFilterIIR<2, IIR_HP2>::processSample(double* coef,
+                                                        double* buf,
+                                                        double val) {
+    double tmp, fir, iir;
+    tmp = buf[0];
+    iir = val * -coef[0]; // swap gain to be in phase with LP2
+    iir -= coef[1] * tmp; fir = -tmp;
+    fir += iir;
+    buf[0] = iir; val = fir;
+
+    tmp = buf[1];
+    iir = val;
+    iir -= coef[2] * tmp; fir = -tmp;
+    fir += iir;
+    buf[1] = iir; val = fir;
+
+    return val;
+}
+
+
 #endif // ENGINEFILTERIIR_H

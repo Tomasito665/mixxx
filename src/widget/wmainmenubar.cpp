@@ -177,22 +177,24 @@ void WMainMenuBar::initialize() {
     // VIEW MENU
     QMenu* pViewMenu = new QMenu(tr("&View"));
 
+    // Skin Settings Menu
     QString mayNotBeSupported = tr("May not be supported on all skins.");
-    QString showSamplersTitle = tr("Show Samplers");
-    QString showSamplersText = tr("Show the sample deck section of the Mixxx interface.") +
+    QString showSkinSettingsTitle = tr("Show Skin Settings Menu");
+    QString showSkinSettingsText = tr("Show the Skin Settings Menu of the currently selected Skin") +
             " " + mayNotBeSupported;
-    auto pViewShowSamplers = new QAction(showSamplersTitle, this);
-    pViewShowSamplers->setCheckable(true);
+    auto pViewShowSkinSettings = new QAction(showSkinSettingsTitle, this);
+    pViewShowSkinSettings->setCheckable(true);
     m_pKbdShortcutsUpdater->addWatcher(new ShortcutChangeWatcher(
-            pViewShowSamplers,
-            ConfigKey("[KeyboardShortcuts]", "ViewMenu_ShowSamplers"),
-            tr("Ctrl+1", "Menubar|View|Show Samplers")
+            pViewShowSkinSettings,
+            ConfigKey("[Master]", "ViewMenu_ShowSkinSettings"),
+            tr("Ctrl+1", "Menubar|View|Show Skin Settings")
     ));
-    pViewShowSamplers->setStatusTip(showSamplersText);
-    pViewShowSamplers->setWhatsThis(buildWhatsThis(showSamplersTitle, showSamplersText));
-    createVisibilityControl(pViewShowSamplers, ConfigKey("[Samplers]", "show_samplers"));
-    pViewMenu->addAction(pViewShowSamplers);
+    pViewShowSkinSettings->setStatusTip(showSkinSettingsText);
+    pViewShowSkinSettings->setWhatsThis(buildWhatsThis(showSkinSettingsTitle, showSkinSettingsText));
+    createVisibilityControl(pViewShowSkinSettings, ConfigKey("[Master]", "skin_settings"));
+    pViewMenu->addAction(pViewShowSkinSettings);
 
+    // Microphone Section
     QString showMicrophoneTitle = tr("Show Microphone Section");
     QString showMicrophoneText = tr("Show the microphone section of the Mixxx interface.") +
             " " + mayNotBeSupported;
@@ -239,21 +241,6 @@ void WMainMenuBar::initialize() {
     pViewShowPreviewDeck->setWhatsThis(buildWhatsThis(showPreviewDeckTitle, showPreviewDeckText));
     createVisibilityControl(pViewShowPreviewDeck, ConfigKey("[PreviewDeck]", "show_previewdeck"));
     pViewMenu->addAction(pViewShowPreviewDeck);
-
-    QString showEffectsTitle = tr("Show Effect Rack");
-    QString showEffectsText = tr("Show the effect rack in the Mixxx interface.") +
-    " " + mayNotBeSupported;
-    auto pViewShowEffects = new QAction(showEffectsTitle, this);
-    pViewShowEffects->setCheckable(true);
-    m_pKbdShortcutsUpdater->addWatcher(new ShortcutChangeWatcher(
-            pViewShowEffects,
-            ConfigKey("[KeyboardShortcuts]", "ViewMenu_ShowEffects"),
-            tr("Ctrl+5", "Menubar|View|Show Effect Rack")
-    ));
-    pViewShowEffects->setStatusTip(showEffectsText);
-    pViewShowEffects->setWhatsThis(buildWhatsThis(showEffectsTitle, showEffectsText));
-    createVisibilityControl(pViewShowEffects, ConfigKey("[EffectRack1]", "show"));
-    pViewMenu->addAction(pViewShowEffects);
 
 
     QString showCoverArtTitle = tr("Show Cover Art");
@@ -735,7 +722,8 @@ void VisibilityControlConnection::slotClearControl() {
 }
 
 void VisibilityControlConnection::slotReconnectControl() {
-    m_pControl.reset(new ControlProxy(m_key, this));
+    m_pControl.reset(new ControlProxy(this));
+    m_pControl->initialize(m_key, false);
     m_pControl->connectValueChanged(SLOT(slotControlChanged()));
     m_pAction->setEnabled(m_pControl->valid());
     slotControlChanged();

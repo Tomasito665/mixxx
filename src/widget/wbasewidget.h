@@ -60,6 +60,15 @@ class WBaseWidget {
     // tooltips to always show the correct shortcut information
     virtual WidgetTooltipWatcher* createTooltipWatcher(QList<ConfigKey> configKeys);
 
+
+    inline const QList<ControlParameterWidgetConnection*>& connections() const {
+        return m_connections;
+    };
+    inline const QList<ControlParameterWidgetConnection*>& leftConnections() const {
+        return m_leftConnections;
+    };
+
+
   protected:
     // Whenever a connected control is changed, onConnectedControlChanged is
     // called. This allows the widget implementor to respond to the change and

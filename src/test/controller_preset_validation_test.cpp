@@ -118,9 +118,7 @@ class FakeController : public Controller {
         Q_UNUSED(data);
         Q_UNUSED(reportID);
     }
-    bool isPolling() const override {
-        return false;
-    }
+
     ControllerPreset* preset() override {
         if (m_bHidPreset) {
             return &m_hidPreset;
@@ -151,7 +149,7 @@ FakeController::~FakeController() {
 
 class ControllerPresetValidationTest : public MixxxTest {
   protected:
-    virtual void SetUp() {
+    void SetUp() override {
         m_presetPaths << QDir::currentPath() + "/res/controllers";
         m_pEnumerator.reset(new PresetInfoEnumerator(m_presetPaths));
     }

@@ -1,20 +1,11 @@
-/*
- *  Created on: 28/apr/2011
- *      Author: vittorio
- */
-
-#include <vamp-hostsdk/vamp-hostsdk.h>
-
-#include "analyzer/vamp/vampanalyzer.h"
-#include "control/controlobject.h"
 #include "preferences/dialog/dlgprefbeats.h"
+
+#include "analyzer/vamp/vamppluginadapter.h"
+#include "control/controlobject.h"
 #include "track/beat_preferences.h"
 
 using Vamp::Plugin;
-using Vamp::PluginHostAdapter;
 using Vamp::HostExt::PluginLoader;
-using Vamp::HostExt::PluginWrapper;
-using Vamp::HostExt::PluginInputDomainAdapter;
 
 DlgPrefBeats::DlgPrefBeats(QWidget *parent, UserSettingsPointer _config)
         : DlgPreferencePage(parent),
@@ -57,8 +48,8 @@ DlgPrefBeats::~DlgPrefBeats() {
 }
 
 void DlgPrefBeats::loadSettings() {
-    if(m_pconfig->getValueString(
-        ConfigKey(VAMP_CONFIG_KEY, VAMP_ANALYZER_BEAT_PLUGIN_ID))==QString("")) {
+    if (m_pconfig->getValueString(
+        ConfigKey(VAMP_CONFIG_KEY, VAMP_ANALYZER_BEAT_PLUGIN_ID)).isEmpty()) {
         slotResetToDefaults();
         slotApply();    // Write to config file so AnalyzerBeats can get the data
         return;
@@ -218,7 +209,6 @@ void DlgPrefBeats::slotApply() {
 }
 
 void DlgPrefBeats::populate() {
-    VampAnalyzer::initializePluginPaths();
     m_listIdentifier.clear();
     m_listName.clear();
     m_listLibrary.clear();
@@ -228,19 +218,18 @@ void DlgPrefBeats::populate() {
     plugincombo->setDuplicatesEnabled(false);
     connect(plugincombo, SIGNAL(currentIndexChanged(int)),
             this, SLOT(pluginSelected(int)));
-    VampPluginLoader *loader = VampPluginLoader::getInstance();
-    std::vector<PluginLoader::PluginKey> plugins = loader->listPlugins();
+    const PluginLoader::PluginKeyList plugins = mixxx::VampPluginAdapter::listPlugins();
     qDebug() << "VampPluginLoader::listPlugins() returned" << plugins.size() << "plugins";
     for (unsigned int iplugin=0; iplugin < plugins.size(); iplugin++) {
         // TODO(XXX): WTF, 48000
-        Plugin *plugin = loader->loadPlugin(plugins[iplugin], 48000);
+        mixxx::VampPluginAdapter pluginAdapter(plugins[iplugin], 48000);
         //TODO: find a way to add beat trackers only
-        if (plugin) {
-            Plugin::OutputList outputs = plugin->getOutputDescriptors();
+        if (pluginAdapter) {
+            const Plugin::OutputList& outputs = pluginAdapter.getOutputDescriptors();
             for (unsigned int ioutput=0; ioutput < outputs.size(); ioutput++) {
-                QString displayname = QString::fromStdString(plugin->getIdentifier()) + ":"
+                QString displayname = QString::fromStdString(pluginAdapter.getIdentifier()) + ":"
                                             + QString::number(ioutput);
-                QString displaynametext = QString::fromStdString(plugin->getName());
+                QString displaynametext = QString::fromStdString(pluginAdapter.getName());
                 qDebug() << "Plugin output displayname:" << displayname << displaynametext;
                 bool goodones = ((displayname.contains("mixxxbpmdetection")||
                                   displayname.contains("qm-tempotracker:0"))||
@@ -251,14 +240,12 @@ void DlgPrefBeats::populate() {
                     m_listName << displaynametext;
                     QString pluginlibrary = QString::fromStdString(plugins[iplugin]).section(":",0,0);
                     m_listLibrary << pluginlibrary;
-                    QString displayname = QString::fromStdString(plugin->getIdentifier()) + ":"
+                    QString displayname = QString::fromStdString(pluginAdapter.getIdentifier()) + ":"
                             + QString::number(ioutput);
                     m_listIdentifier << displayname;
                     plugincombo->addItem(displaynametext, displayname);
                 }
             }
-            delete plugin;
-            plugin = 0;
         }
     }
 }

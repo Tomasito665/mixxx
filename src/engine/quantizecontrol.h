@@ -16,13 +16,11 @@ class QuantizeControl : public EngineControl {
     Q_OBJECT
   public:
     QuantizeControl(QString group, UserSettingsPointer pConfig);
-    virtual ~QuantizeControl();
+    ~QuantizeControl() override;
 
-    virtual void setCurrentSample(const double dCurrentSample,
-                                  const double dTotalSamples);
-
-  public slots:
-    void trackLoaded(TrackPointer pNewTrack, TrackPointer pOldTrack) override;
+    void setCurrentSample(const double dCurrentSample,
+            const double dTotalSamples, const double dTrackSampleRate) override;
+    void trackLoaded(TrackPointer pNewTrack) override;
 
   private slots:
     void slotBeatsUpdated();
@@ -39,6 +37,7 @@ class QuantizeControl : public EngineControl {
     ControlObject* m_pCOPrevBeat;
     ControlObject* m_pCOClosestBeat;
 
+    // objects below are written from an engine worker thread
     TrackPointer m_pTrack;
     BeatsPointer m_pBeats;
 };

@@ -3,23 +3,22 @@
 #include <QDebug>
 #include <iostream>
 
-LayoutsToolMain::LayoutsToolMain(QObject* parent) :
-        QObject(parent) {
-
-    // Find layouts.h path (check for Mixxx directory four directories up)
+LayoutsToolMain::LayoutsToolMain(QObject* parent)
+        : QObject(parent) {
+    // Find layouts.cpp path (check for Mixxx directory four directories up)
     bool layoutsFound = false;
     QDir cp = QDir::currentPath();
 
     for (int i = 0; i < 5; i++) {
-        QString path(cp.absolutePath()+"/src/controllers/keyboard/layouts.cpp");
+        cp.cdUp();
+        QString path(cp.absolutePath()+"/src/controllers/keyboard");
         QFileInfo checkFile(path);
 
-        if (checkFile.exists() && checkFile.isFile()) {
-            m_FilePath = path;
+        if (checkFile.exists()) {
+            m_FilePath = path + "/layouts.cpp";
             qDebug() << "Found path: " << path;
             layoutsFound = true;
         }
-        cp.cdUp();
     }
 
     if (!layoutsFound) {
@@ -54,7 +53,7 @@ void LayoutsToolMain::mainMenu() {
         int menuChoice = 0;
 
         // Print menu
-        utils::clearTerminal();
+        //utils::clearTerminal();
         utils::qout() << "********** LAYOUTS TOOL - MAIN MENU **********" << endl;
         if (loaded) utils::qout() << "Currently opened file: " << m_FilePath << endl;
         utils::qout() << "(1): Open file" << endl;
@@ -76,7 +75,7 @@ void LayoutsToolMain::mainMenu() {
             }
 
             case 2: {
-                utils::qout() << "Save file..." << endl;
+                utils::qout() << "Save file " << m_FilePath << "..." << endl;
                 QFile f(m_FilePath);
                 m_pLayoutsFileHandler->save(f, m_Layouts);
                 break;
@@ -323,7 +322,6 @@ void LayoutsToolMain::findSharedKeyCharsMenu() {
                 break;
         }
     } while (!backToMain);
-
 }
 
 void LayoutsToolMain::showLayouts() {

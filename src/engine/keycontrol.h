@@ -14,7 +14,7 @@ class KeyControl : public EngineControl {
 
     struct PitchTempoRatio {
         // this is the calculated value used by engine buffer for pitch
-        // by default is is equal to the tempoRatio set by the speed slider
+        // by default it is equal to the tempoRatio set by the speed slider
         double pitchRatio;
         // this is the value of the speed slider and speed slider
         // effecting controls at the moment of calculation
@@ -25,14 +25,12 @@ class KeyControl : public EngineControl {
     };
 
     KeyControl(QString group, UserSettingsPointer pConfig);
-    virtual ~KeyControl();
+    ~KeyControl() override;
 
     // Returns a struct, with the results of the last pitch and tempo calculations
     KeyControl::PitchTempoRatio getPitchTempoRatio();
 
     double getKey();
-
-    void collectFeatures(GroupFeatureState* pGroupFeatures) const;
 
   private slots:
     void slotSetEngineKey(double);
@@ -52,29 +50,28 @@ class KeyControl : public EngineControl {
     void updatePitchAdjust();
     void updateRate();
 
-    // ControlObjects that come from EngineBuffer
-    ControlObject* m_pRateSlider;
-    ControlObject* m_pRateRange;
-    ControlObject* m_pRateDir;
+    ControlProxy* m_pRateSlider;
+    ControlProxy* m_pRateRange;
+    ControlProxy* m_pRateDir;
 
-    ControlObject* m_pVCRate;
-    ControlObject* m_pVCEnabled;
+    ControlProxy* m_pVCRate;
+    ControlProxy* m_pVCEnabled;
 
-    ControlObject* m_pKeylock;
+    ControlProxy* m_pKeylock;
     ControlPotmeter* m_pPitch;
     ControlPotmeter* m_pPitchAdjust;
     ControlPushButton* m_pButtonSyncKey;
     ControlPushButton* m_pButtonResetKey;
     ControlPushButton* m_keylockMode;
+    ControlPushButton* m_keyunlockMode;
 
-    /** The current loaded file's detected key */
+    // The current loaded file's detected key
     ControlObject* m_pFileKey;
 
-    /** The current effective key of the engine */
+    // The current effective key of the engine
     ControlObject* m_pEngineKey;
     ControlPotmeter* m_pEngineKeyDistance;
 
-    TrackPointer m_pTrack;
     struct PitchTempoRatio m_pitchRateInfo;
     QAtomicInt m_updatePitchRequest;
     QAtomicInt m_updatePitchAdjustRequest;

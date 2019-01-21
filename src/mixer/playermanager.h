@@ -23,12 +23,14 @@ class Library;
 class Microphone;
 class PreviewDeck;
 class Sampler;
+class SamplerBank;
 class SoundManager;
-class TrackCollection;
 
 // For mocking PlayerManager.
 class PlayerManagerInterface {
   public:
+    virtual ~PlayerManagerInterface() {};
+
     // Get a BaseTrackPlayer (i.e. a Deck or a Sampler) by its group
     virtual BaseTrackPlayer* getPlayer(QString group) const = 0;
 
@@ -62,6 +64,7 @@ class PlayerManager : public QObject, public PlayerManagerInterface {
     virtual ~PlayerManager();
 
     // Add a deck to the PlayerManager
+    // (currently unused, keept for consistency with other types)
     void addDeck();
 
     // Add number of decks according to configuration.
@@ -69,6 +72,9 @@ class PlayerManager : public QObject, public PlayerManagerInterface {
 
     // Add a sampler to the PlayerManager
     void addSampler();
+
+    // Load samplers from samplers.xml file in config directory
+    void loadSamplers();
 
     // Add a PreviewDeck to the PlayerManager
     void addPreviewDeck();
@@ -82,13 +88,17 @@ class PlayerManager : public QObject, public PlayerManagerInterface {
     // Return the number of players. Thread-safe.
     static unsigned int numDecks();
 
-    unsigned int numberOfDecks() const {
+    unsigned int numberOfDecks() const override {
         return numDecks();
     }
 
     // Returns true if the group is a deck group. If index is non-NULL,
     // populates it with the deck number (1-indexed).
     static bool isDeckGroup(const QString& group, int* number=NULL);
+
+    // Returns true if the group is a sampler group. If index is non-NULL,
+    // populates it with the deck number (1-indexed).
+    static bool isSamplerGroup(const QString& group, int* number=nullptr);
 
     // Returns true if the group is a preview deck group. If index is non-NULL,
     // populates it with the deck number (1-indexed).
@@ -97,28 +107,28 @@ class PlayerManager : public QObject, public PlayerManagerInterface {
     // Return the number of samplers. Thread-safe.
     static unsigned int numSamplers();
 
-    unsigned int numberOfSamplers() const {
+    unsigned int numberOfSamplers() const override {
         return numSamplers();
     }
 
     // Return the number of preview decks. Thread-safe.
     static unsigned int numPreviewDecks();
 
-    unsigned int numberOfPreviewDecks() const {
+    unsigned int numberOfPreviewDecks() const override {
         return numPreviewDecks();
     }
 
     // Get a BaseTrackPlayer (i.e. a Deck, Sampler or PreviewDeck) by its
     // group. Auxiliaries and microphones are not players.
-    BaseTrackPlayer* getPlayer(QString group) const;
+    BaseTrackPlayer* getPlayer(QString group) const override;
 
     // Get the deck by its deck number. Decks are numbered starting with 1.
-    Deck* getDeck(unsigned int player) const;
+    Deck* getDeck(unsigned int player) const override;
 
-    PreviewDeck* getPreviewDeck(unsigned int libPreviewPlayer) const;
+    PreviewDeck* getPreviewDeck(unsigned int libPreviewPlayer) const override;
 
     // Get the sampler by its number. Samplers are numbered starting with 1.
-    Sampler* getSampler(unsigned int sampler) const;
+    Sampler* getSampler(unsigned int sampler) const override;
 
     // Get the microphone by its number. Microphones are numbered starting with 1.
     Microphone* getMicrophone(unsigned int microphone) const;
@@ -162,6 +172,10 @@ class PlayerManager : public QObject, public PlayerManagerInterface {
         return QString("[Auxiliary%1]").arg(i + 1);
     }
 
+    static QAtomicPointer<ControlProxy> m_pCOPNumDecks;
+    static QAtomicPointer<ControlProxy> m_pCOPNumSamplers;
+    static QAtomicPointer<ControlProxy> m_pCOPNumPreviewDecks;
+
   public slots:
     // Slots for loading tracks into a Player, which is either a Sampler or a Deck
     void slotLoadTrackToPlayer(TrackPointer pTrack, QString group, bool play = false);
@@ -179,11 +193,11 @@ class PlayerManager : public QObject, public PlayerManagerInterface {
     // Loads the location to the sampler. samplerNumber is 1-indexed
     void slotLoadToSampler(QString location, int samplerNumber);
 
-    void slotNumDecksControlChanged(double v);
-    void slotNumSamplersControlChanged(double v);
-    void slotNumPreviewDecksControlChanged(double v);
-    void slotNumMicrophonesControlChanged(double v);
-    void slotNumAuxiliariesControlChanged(double v);
+    void slotChangeNumDecks(double v);
+    void slotChangeNumSamplers(double v);
+    void slotChangeNumPreviewDecks(double v);
+    void slotChangeNumMicrophones(double v);
+    void slotChangeNumAuxiliaries(double v);
 
   signals:
     void loadLocationToPlayer(QString location, QString group);
@@ -228,6 +242,7 @@ class PlayerManager : public QObject, public PlayerManagerInterface {
     SoundManager* m_pSoundManager;
     EffectsManager* m_pEffectsManager;
     EngineMaster* m_pEngine;
+    SamplerBank* m_pSamplerBank;
     AnalyzerQueue* m_pAnalyzerQueue;
     ControlObject* m_pCONumDecks;
     ControlObject* m_pCONumSamplers;

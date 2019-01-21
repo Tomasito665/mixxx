@@ -24,6 +24,7 @@
 
 class DeviceChannelListener : public QObject, public hss1394::ChannelListener {
     Q_OBJECT
+
   public:
     DeviceChannelListener(QObject* pParent, QString name);
     virtual ~DeviceChannelListener();
@@ -42,6 +43,7 @@ class DeviceChannelListener : public QObject, public hss1394::ChannelListener {
 
 class Hss1394Controller : public MidiController {
     Q_OBJECT
+
   public:
     Hss1394Controller(const hss1394::TNodeInfo deviceInfo, int deviceIndex);
     ~Hss1394Controller() override;
@@ -50,16 +52,14 @@ class Hss1394Controller : public MidiController {
     int open() override;
     int close() override;
 
-  private:
-    void sendWord(unsigned int word) override;
+  protected:
+    void sendShortMsg(unsigned char status, unsigned char byte1,
+                      unsigned char byte2) override;
 
+  private:
     // The sysex data must already contain the start byte 0xf0 and the end byte
     // 0xf7.
     void send(QByteArray data) override;
-
-    bool isPolling() const override {
-        return false;
-    }
 
     hss1394::TNodeInfo m_deviceInfo;
     int m_iDeviceIndex;

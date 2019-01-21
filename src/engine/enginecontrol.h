@@ -7,6 +7,8 @@
 #include <QObject>
 #include <QList>
 
+#include <gtest/gtest_prod.h>
+
 #include "preferences/usersettings.h"
 #include "track/track.h"
 #include "control/controlvalue.h"
@@ -36,28 +38,15 @@ class EngineControl : public QObject {
   public:
     EngineControl(QString group,
                   UserSettingsPointer pConfig);
-    virtual ~EngineControl();
+    ~EngineControl() override;
 
     // Called by EngineBuffer::process every latency period. See the above
     // comments for information about guarantees that hold during this call. An
     // EngineControl can perform any upkeep operations that are necessary during
-    // this call. If the EngineControl would like to request the playback
-    // position to be altered, it should return the sample to seek to from this
-    // method. Otherwise it should return kNoTrigger.
-    virtual double process(const double dRate,
-                           const double dCurrentSample,
-                           const double dTotalSamples,
-                           const int iBufferSize);
-
-    virtual double nextTrigger(const double dRate,
-                               const double dCurrentSample,
-                               const double dTotalSamples,
-                               const int iBufferSize);
-
-    virtual double getTrigger(const double dRate,
-                              const double dCurrentSample,
-                              const double dTotalSamples,
-                              const int iBufferSize);
+    // this call.
+    virtual void process(const double dRate,
+                         const double dCurrentSample,
+                         const int iBufferSize);
 
     // hintReader allows the EngineControl to provide hints to the reader to
     // indicate that the given portion of a song is a potential imminent seek
@@ -66,10 +55,8 @@ class EngineControl : public QObject {
 
     virtual void setEngineMaster(EngineMaster* pEngineMaster);
     void setEngineBuffer(EngineBuffer* pEngineBuffer);
-    virtual void setCurrentSample(const double dCurrentSample, const double dTotalSamples);
-    double getCurrentSample() const;
-    double getTotalSamples() const;
-    bool atEndPosition() const;
+    virtual void setCurrentSample(const double dCurrentSample,
+            const double dTotalSamples, const double dTrackSampleRate);
     QString getGroup() const;
 
     // Called to collect player features for effects processing.
@@ -78,12 +65,19 @@ class EngineControl : public QObject {
     }
 
     // Called whenever a seek occurs to allow the EngineControl to respond.
-    virtual void notifySeek(double dNewPlaypo);
-
-  public slots:
-    virtual void trackLoaded(TrackPointer pNewTrack, TrackPointer pOldTrack);
+    virtual void notifySeek(double dNewPlaypo, bool adjustingPhase);
+    virtual void trackLoaded(TrackPointer pNewTrack);
 
   protected:
+    struct SampleOfTrack {
+        double current;
+        double total;
+        double rate;
+    };
+
+    SampleOfTrack getSampleOfTrack() const {
+        return m_sampleOfTrack.getValue();
+    }
     void seek(double fractionalPosition);
     void seekAbs(double sample);
     // Seek to an exact sample and don't allow quantizing adjustment.
@@ -98,14 +92,17 @@ class EngineControl : public QObject {
     UserSettingsPointer m_pConfig;
 
   private:
-    struct SampleOfTrack {
-        double current;
-        double total;
-    };
-
     ControlValueAtomic<SampleOfTrack> m_sampleOfTrack;
     EngineMaster* m_pEngineMaster;
     EngineBuffer* m_pEngineBuffer;
+
+
+    FRIEND_TEST(LoopingControlTest, ReloopToggleButton_DoesNotJumpAhead);
+    FRIEND_TEST(LoopingControlTest, ReloopAndStopButton);
+    FRIEND_TEST(LoopingControlTest, LoopScale_HalvesLoop);
+    FRIEND_TEST(LoopingControlTest, LoopMoveTest);
+    FRIEND_TEST(LoopingControlTest, LoopResizeSeek);
+    FRIEND_TEST(LoopingControlTest, Beatjump_JumpsByBeats);
 };
 
 #endif /* ENGINECONTROL_H */

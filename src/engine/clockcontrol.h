@@ -16,18 +16,20 @@ class ClockControl: public EngineControl {
     ClockControl(QString group,
                  UserSettingsPointer pConfig);
 
-    virtual ~ClockControl();
+    ~ClockControl() override;
 
-    double process(const double dRate, const double currentSample,
-                   const double totalSamples, const int iBufferSize);
+    void process(const double dRate, const double currentSample,
+            const int iBufferSize) override;
 
   public slots:
-    void trackLoaded(TrackPointer pNewTrack, TrackPointer pOldTrack) override;
+    void trackLoaded(TrackPointer pNewTrack) override;
     void slotBeatsUpdated();
 
   private:
     ControlObject* m_pCOBeatActive;
     ControlProxy* m_pCOSampleRate;
+
+    // objects below are written from an engine worker thread
     TrackPointer m_pTrack;
     BeatsPointer m_pBeats;
 };
